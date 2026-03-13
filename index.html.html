@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Kapitan JSM"/>
+<meta name="theme-color" content="#04111f"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%2304111f'/><text y='130' font-size='110' text-anchor='middle' x='90'>⚓</text></svg>"/>
+<title>Kapitan JSM</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Source+Serif+4:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --ocean: #04111f;
+    --deep: #071928;
+    --hull: #0b2540;
+    --wake: #0f3560;
+    --brass: #c8960a;
+    --gold: #f0b429;
+    --foam: #e8f4fd;
+    --mist: #8aaec8;
+    --signal: #e63946;
+    --green: #2a9d5c;
+    --safe: env(safe-area-inset-bottom, 20px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; height: 100dvh; overflow: hidden; background: var(--ocean); color: var(--foam); font-family: 'Source Serif 4', Georgia, serif; }
+
+  /* NAV BAR */
+  #nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--deep);
+    border-top: 1px solid var(--hull);
+    display: flex; justify-content: space-around; align-items: center;
+    padding: 10px 0 max(12px, var(--safe));
+    z-index: 100;
+  }
+  .nav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: none; border: none; color: var(--mist);
+    font-size: 9px; font-family: 'Source Serif 4', serif; letter-spacing: .5px;
+    text-transform: uppercase; cursor: pointer; padding: 4px 12px;
+    transition: color .2s;
+  }
+  .nav-btn .ico { font-size: 20px; }
+  .nav-btn.active { color: var(--gold); }
+
+  /* SCREENS */
+  .screen { display: none; flex-direction: column; height: 100dvh; padding-bottom: calc(70px + var(--safe)); overflow-y: auto; }
+  .screen.active { display: flex; }
+  .screen::-webkit-scrollbar { display: none; }
+
+  /* HEADER STRIP */
+  .hdr {
+    background: linear-gradient(180deg, var(--deep) 0%, var(--ocean) 100%);
+    padding: 52px 20px 18px;
+    border-bottom: 1px solid var(--hull);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .hdr-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--gold); }
+  .hdr-sub { font-size: 12px; color: var(--mist); margin-top: 3px; font-style: italic; }
+
+  /* HOME / DASHBOARD */
+  #home-content { padding: 20px 16px; gap: 14px; display: flex; flex-direction: column; }
+  .welcome-card {
+    background: linear-gradient(135deg, var(--hull), var(--wake));
+    border: 1px solid #1a4a7a; border-radius: 16px; padding: 20px;
+    text-align: center;
+  }
+  .welcome-card .anchor { font-size: 44px; margin-bottom: 8px; }
+  .welcome-card h2 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 20px; }
+  .welcome-card p { color: var(--mist); font-size: 13px; margin-top: 6px; line-height: 1.6; }
+  .progress-row { display: flex; gap: 10px; }
+  .stat-card {
+    flex: 1; background: var(--deep); border: 1px solid var(--hull);
+    border-radius: 12px; padding: 14px 10px; text-align: center;
+  }
+  .stat-num { font-size: 26px; font-family: 'Playfair Display', serif; color: var(--gold); }
+  .stat-lbl { font-size: 10px; color: var(--mist); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+  .section-title { font-size: 11px; color: var(--mist); text-transform: uppercase; letter-spacing: 1px; padding: 0 2px; }
+  .topic-card {
+    background: var(--deep); border: 1px solid var(--hull); border-radius: 12px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 14px;
+    cursor: pointer; transition: border-color .2s;
+  }
+  .topic-card:active { border-color: var(--gold); }
+  .topic-ico { font-size: 24px; width: 40px; text-align: center; }
+  .topic-info h3 { font-size: 14px; color: var(--foam); margin-bottom: 2px; }
+  .topic-info p { font-size: 11px; color: var(--mist); }
+  .topic-arrow { margin-left: auto; color: var(--mist); font-size: 16px; }
+
+  /* STUDY SCREEN */
+  #study-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .subject-card {
+    background: var(--deep); border: 1px solid var(--hull); border-radius: 14px;
+    overflow: hidden;
+  }
+  .subject-hdr {
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; background: var(--deep);
+  }
+  .subject-hdr .s-ico { font-size: 22px; }
+  .subject-hdr .s-name { font-size: 15px; color: var(--foam); font-family: 'Playfair Display', serif; }
+  .subject-hdr .s-count { margin-left: auto; font-size: 11px; color: var(--mist); }
+  .subject-body { display: none; padding: 0 16px 14px; }
+  .subject-body.open { display: block; }
+  .rule-item { padding: 10px 0; border-bottom: 1px solid var(--hull); }
+  .rule-item:last-child { border-bottom: none; }
+  .rule-num { font-size: 10px; color: var(--brass); letter-spacing: .5px; text-transform: uppercase; margin-bottom: 3px; }
+  .rule-title { font-size: 13px; color: var(--foam); font-weight: 600; margin-bottom: 4px; }
+  .rule-body { font-size: 12px; color: var(--mist); line-height: 1.65; }
+  .rule-body em { color: var(--gold); font-style: normal; font-weight: 600; }
+
+  /* FLASHCARDS */
+  #flash-wrap { padding: 16px; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+  .flash-progress { width: 100%; background: var(--hull); border-radius: 4px; height: 4px; }
+  .flash-bar { height: 4px; background: var(--gold); border-radius: 4px; transition: width .4s; }
+  .flash-counter { font-size: 12px; color: var(--mist); text-align: center; }
+  .flash-filter { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .filter-btn {
+    padding: 6px 12px; border-radius: 20px; border: 1px solid var(--hull);
+    background: var(--deep); color: var(--mist); font-size: 11px;
+    font-family: inherit; cursor: pointer; transition: all .2s;
+  }
+  .filter-btn.on { background: var(--wake); border-color: var(--gold); color: var(--gold); }
+  .flashcard {
+    width: 100%; max-width: 420px;
+    background: linear-gradient(145deg, var(--hull), var(--wake));
+    border: 1px solid #1e4a7a; border-radius: 20px;
+    min-height: 240px; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; padding: 28px 22px;
+    cursor: pointer; text-align: center; position: relative;
+    transition: transform .15s;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  }
+  .flashcard:active { transform: scale(.97); }
+  .flash-cat { font-size: 10px; color: var(--brass); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .flash-q { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--foam); line-height: 1.5; }
+  .flash-a { font-size: 13px; color: #aad4f0; line-height: 1.65; margin-top: 14px; display: none; border-top: 1px solid var(--hull); padding-top: 14px; width: 100%; }
+  .flash-a.show { display: block; }
+  .flash-hint { font-size: 11px; color: var(--mist); margin-top: 16px; font-style: italic; }
+  .flash-actions { display: flex; gap: 12px; width: 100%; max-width: 420px; }
+  .flash-btn {
+    flex: 1; padding: 14px; border-radius: 14px; border: none;
+    font-size: 14px; font-family: inherit; cursor: pointer; font-weight: 600;
+    letter-spacing: .3px;
+  }
+  .flash-btn.bad { background: #3a1218; color: var(--signal); border: 1px solid #6a1a22; }
+  .flash-btn.good { background: #0f2e1e; color: var(--green); border: 1px solid #1a5a38; }
+  .flash-btn.flip { background: var(--wake); color: var(--foam); border: 1px solid #2a5a9a; flex: 2; }
+
+  /* CHAT SCREEN */
+  #chat-wrap { display: flex; flex-direction: column; height: calc(100dvh - 70px - var(--safe)); }
+  #chat-hdr { padding: 52px 20px 14px; background: var(--deep); border-bottom: 1px solid var(--hull); flex-shrink: 0; }
+  #chat-hdr h1 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 20px; }
+  #chat-hdr p { font-size: 11px; color: var(--mist); font-style: italic; margin-top: 2px; }
+  #messages {
+    flex: 1; overflow-y: auto; padding: 16px 14px; display: flex;
+    flex-direction: column; gap: 12px;
+  }
+  #messages::-webkit-scrollbar { display: none; }
+  .msg { display: flex; }
+  .msg.user { justify-content: flex-end; }
+  .msg-bubble {
+    max-width: 82%; padding: 11px 14px; border-radius: 18px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .msg.user .msg-bubble { background: linear-gradient(135deg,#1a4a8a,#0f3060); border: 1px solid #2a5a9a; color: #c5d8f0; border-radius: 18px 18px 4px 18px; }
+  .msg.bot .msg-bubble { background: var(--hull); border: 1px solid var(--wake); color: var(--foam); border-radius: 4px 18px 18px 18px; }
+  .msg-bubble h3 { font-size: 13px; color: var(--gold); margin: 6px 0 3px; font-family: 'Playfair Display', serif; }
+  .msg-bubble li { margin-left: 16px; margin-bottom: 2px; }
+  .msg-bubble strong { color: #aad4f0; }
+  #typing { display: none; }
+  #typing .msg-bubble { color: var(--mist); font-style: italic; }
+  #chat-input-row {
+    display: flex; gap: 8px; padding: 10px 14px;
+    padding-bottom: max(14px, var(--safe));
+    background: var(--deep); border-top: 1px solid var(--hull); flex-shrink: 0;
+  }
+  #chat-input {
+    flex: 1; background: var(--ocean); border: 1px solid var(--hull);
+    border-radius: 22px; padding: 10px 16px; color: var(--foam);
+    font-size: 14px; font-family: inherit; resize: none; line-height: 1.4;
+    max-height: 100px; outline: none;
+  }
+  #chat-input:focus { border-color: var(--wake); }
+  #send-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: none;
+    background: linear-gradient(135deg, #1a5aaa, #0f3a7a);
+    color: var(--gold); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; align-self: flex-end;
+  }
+  .quick-btns { display: flex; gap: 6px; overflow-x: auto; padding: 0 14px 10px; flex-shrink: 0; }
+  .quick-btns::-webkit-scrollbar { display: none; }
+  .quick-btn {
+    white-space: nowrap; padding: 7px 12px; background: var(--hull);
+    border: 1px solid var(--wake); border-radius: 16px; color: var(--mist);
+    font-size: 11px; font-family: inherit; cursor: pointer; flex-shrink: 0;
+  }
+
+  /* SESSIONS PANEL */
+  #sessions-wrap { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .sess-card {
+    background: var(--deep); border: 1px solid var(--hull); border-radius: 12px;
+    padding: 14px 16px; cursor: pointer; position: relative;
+  }
+  .sess-card.active-sess { border-color: var(--gold); }
+  .sess-title { font-size: 13px; color: var(--foam); margin-bottom: 3px; }
+  .sess-meta { font-size: 10px; color: var(--mist); }
+  .sess-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .sess-tag { font-size: 9px; padding: 2px 6px; background: var(--hull); border: 1px solid var(--wake); border-radius: 4px; color: var(--mist); }
+  .sess-del { position: absolute; right: 12px; top: 12px; background: none; border: none; color: #3a5a7a; font-size: 14px; cursor: pointer; padding: 4px; }
+  .new-sess-btn {
+    width: 100%; padding: 14px; background: var(--hull); border: 1px dashed var(--wake);
+    border-radius: 12px; color: var(--mist); font-family: inherit; font-size: 13px;
+    cursor: pointer;
+  }
+
+  /* DOTS LOADER */
+  .dots { display: flex; gap: 5px; padding: 4px 0; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mist); animation: blink 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: .2s; }
+  .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+
+  /* wave decoration */
+  .wave-sep { height: 2px; background: linear-gradient(90deg, transparent, var(--wake), transparent); margin: 4px 0; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ SCREENS ═══════════════════ -->
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div id="home-content">
+    <div class="welcome-card">
+      <div class="anchor">⚓</div>
+      <h2>Witaj, Kapitanie!</h2>
+      <p>Przygotowanie do egzaminu<br/><strong>Jachtowego Sternika Morskiego PZŻ</strong></p>
+      <div class="wave-sep" style="margin:12px 0;"></div>
+      <p style="font-size:11px;">Nauka w języku polskim · AI asystent · Fiszki · Przepisy</p>
+    </div>
+    <div class="progress-row">
+      <div class="stat-card"><div class="stat-num" id="st-sessions">0</div><div class="stat-lbl">Sesje</div></div>
+      <div class="stat-card"><div class="stat-num" id="st-cards">0</div><div class="stat-lbl">Fiszki</div></div>
+      <div class="stat-card"><div class="stat-num" id="st-correct">0%</div><div class="stat-lbl">Wynik</div></div>
+    </div>
+    <div class="section-title">Tematy egzaminacyjne JSM</div>
+    <div class="topic-card" onclick="goStudy('colreg')">
+      <div class="topic-ico">🚢</div>
+      <div class="topic-info"><h3>COLREG — Przepisy drogi morskiej</h3><p>Zasady pierwszeństwa, światła, znaki</p></div>
+      <div class="topic-arrow">›</div>
+    </div>
+    <div class="topic-card" onclick="goStudy('navig')">
+      <div class="topic-ico">🧭</div>
+      <div class="topic-info"><h3>Nawigacja i kartografia</h3><p>Busola, mapy, kursy, namiary, pozycja</p></div>
+      <div class="topic-arrow">›</div>
+    </div>
+    <div class="topic-card" onclick="goStudy('meteo')">
+      <div class="topic-ico">🌬️</div>
+      <div class="topic-info"><h3>Meteorologia morska</h3><p>Wiatr, pogoda, fronty, prognozy</p></div>
+      <div class="topic-arrow">›</div>
+    </div>
+    <div class="topic-card" onclick="goStudy('prawo')">
+      <div class="topic-ico">⚖️</div>
+      <div class="topic-info"><h3>Prawo morskie i przepisy PZŻ</h3><p>Bezpieczeństwo, uprawnienia, dokumenty</p></div>
+      <div class="topic-arrow">›</div>
+    </div>
+    <div class="topic-card" onclick="showTab('chat')">
+      <div class="topic-ico">🤖</div>
+      <div class="topic-info"><h3>Asystent AI — zadaj pytanie</h3><p>Wyjaśnienia po polsku, przykłady, testy</p></div>
+      <div class="topic-arrow">›</div>
+    </div>
+  </div>
+</div>
+
+<!-- STUDY -->
+<div id="study" class="screen">
+  <div class="hdr">
+    <div class="hdr-title">📖 Materiał do nauki</div>
+    <div class="hdr-sub">Jachtowy Sternik Morski — PZŻ</div>
+  </div>
+  <div id="study-list"></div>
+</div>
+
+<!-- FLASHCARDS -->
+<div id="flash" class="screen">
+  <div class="hdr">
+    <div class="hdr-title">🃏 Fiszki egzaminacyjne</div>
+    <div class="hdr-sub">Dotknij kartę, aby zobaczyć odpowiedź</div>
+  </div>
+  <div id="flash-wrap">
+    <div class="flash-filter" id="flash-filter"></div>
+    <div class="flash-progress"><div class="flash-bar" id="fbar"></div></div>
+    <div class="flash-counter" id="fcounter"></div>
+    <div class="flashcard" id="flashcard" onclick="flipCard()">
+      <div class="flash-cat" id="fcat"></div>
+      <div class="flash-q" id="fq"></div>
+      <div class="flash-a" id="fa"></div>
+      <div class="flash-hint" id="fhint">Dotknij, aby zobaczyć odpowiedź</div>
+    </div>
+    <div class="flash-actions" id="flash-actions" style="display:none;">
+      <button class="flash-btn bad" onclick="rateCard(0)">✗ Nie wiem</button>
+      <button class="flash-btn good" onclick="rateCard(1)">✓ Wiem</button>
+    </div>
+    <button class="flash-btn flip" style="max-width:420px;width:100%;" onclick="nextCard()">Następna →</button>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div id="chat" class="screen" style="padding-bottom:0;">
+  <div id="chat-wrap">
+    <div id="chat-hdr">
+      <h1>🤖 Asystent Kapitana</h1>
+      <p>Pytaj po polsku — egzamin JSM, COLREGs, nawigacja</p>
+    </div>
+    <div class="quick-btns" id="quick-btns">
+      <button class="quick-btn" onclick="quickAsk('Wyjaśnij Prawidło 16 COLREG')">Prawidło 16</button>
+      <button class="quick-btn" onclick="quickAsk('Jakie światła pokazuje statek motorowy w nocy?')">Światła statku</button>
+      <button class="quick-btn" onclick="quickAsk('Co to jest deklinacja magnetyczna?')">Deklinacja</button>
+      <button class="quick-btn" onclick="quickAsk('Skala Beauforta — opisz stopnie')">Skala Beauforta</button>
+      <button class="quick-btn" onclick="quickAsk('Jakie dokumenty są wymagane na jachcie morskim?')">Dokumenty JSM</button>
+      <button class="quick-btn" onclick="quickAsk('Co to jest strefa TSS i jak przez nią przejść?')">TSS</button>
+    </div>
+    <div id="messages">
+      <div class="msg bot">
+        <div class="msg-bubble">
+          Witaj, Kapitanie! 🧭<br/><br/>
+          Jestem Twoim asystentem do przygotowania egzaminu <strong>Jachtowego Sternika Morskiego PZŻ</strong>.<br/><br/>
+          Pytaj po polsku o: przepisy COLREG, nawigację, meteorologię morską, prawo morskie PZŻ, procedury bezpieczeństwa.<br/><br/>
+          Wszystkie wyjaśnienia dostosowane do egzaminu JSM. <em>Do dzieła!</em>
+        </div>
+      </div>
+      <div class="msg" id="typing" style="display:none;">
+        <div class="msg-bubble"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+      </div>
+    </div>
+    <div id="chat-input-row">
+      <textarea id="chat-input" placeholder="Zadaj pytanie po polsku..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+      <button id="send-btn" onclick="sendMsg()">⬆</button>
+    </div>
+  </div>
+</div>
+
+<!-- SESSIONS -->
+<div id="sessions" class="screen">
+  <div class="hdr">
+    <div class="hdr-title">📋 Historia sesji</div>
+    <div class="hdr-sub">Zapisane rozmowy i postępy</div>
+  </div>
+  <div id="sessions-wrap">
+    <button class="new-sess-btn" onclick="newChatSession()">+ Nowa sesja czatu</button>
+    <div id="session-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ BOTTOM NAV ═══════════════════ -->
+<nav id="nav">
+  <button class="nav-btn active" onclick="showTab('home')" id="nb-home"><span class="ico">⚓</span>Start</button>
+  <button class="nav-btn" onclick="showTab('study')" id="nb-study"><span class="ico">📖</span>Nauka</button>
+  <button class="nav-btn" onclick="showTab('flash')" id="nb-flash"><span class="ico">🃏</span>Fiszki</button>
+  <button class="nav-btn" onclick="showTab('chat')" id="nb-chat"><span class="ico">🤖</span>AI</button>
+  <button class="nav-btn" onclick="showTab('sessions')" id="nb-sessions"><span class="ico">📋</span>Sesje</button>
+</nav>
+
+<script>
+// ══════════════════════════════════════════
+// DATA — STUDY CONTENT
+// ══════════════════════════════════════════
+const STUDY_DATA = {
+  colreg: {
+    name: "COLREG — Przepisy drogi morskiej",
+    ico: "🚢",
+    rules: [
+      { num: "Prawidło 1", title: "Zakres stosowania", body: "Przepisy stosują się do <em>wszystkich statków</em> na morzu pełnym oraz wodach z nim połączonych. Każde państwo może ustanowić dodatkowe przepisy dla wód wewnętrznych." },
+      { num: "Prawidło 2", title: "Odpowiedzialność", body: "Żaden przepis nie zwalnia statku, armatora, kapitana ani załogi od skutków <em>zaniedbania</em>. Zawsze należy uwzględniać szczególne okoliczności i niebezpieczeństwo kolizji." },
+      { num: "Prawidło 5", title: "Obserwacja", body: "Każdy statek powinien stale utrzymywać <em>właściwą obserwację</em> wzrokiem i słuchem, a także wszystkimi dostępnymi środkami (radar, VHF, AIS), aby w pełni ocenić sytuację." },
+      { num: "Prawidło 6", title: "Bezpieczna szybkość", body: "Statek powinien stale utrzymywać <em>bezpieczną szybkość</em>, dostosowaną do widoczności, ruchu, manewrowości, stanu morza. W nocy i przy złej pogodzie — spowalniaj." },
+      { num: "Prawidło 8", title: "Działanie dla uniknięcia kolizji", body: "Zmiana kursu/szybkości powinna być <em>wyraźna i wykonana z wyprzedzeniem</em>. Mała zmiana kursu jest trudna do wykrycia przez drugi statek — działaj zdecydowanie." },
+      { num: "Prawidło 13", title: "Statek wyprzedzający", body: "Statek <em>wyprzedzający</em> zobowiązany jest trzymać się z dala od statku wyprzedzanego — niezależnie od tego, czy jest pod żaglami, czy pod silnikiem." },
+      { num: "Prawidło 14", title: "Sytuacja czołowa", body: "Gdy dwa statki mechaniczne idą <em>naprzeciwko siebie</em> (lub prawie naprzeciwko) — oba zmieniają kurs w prawo, by minąć się lewoburtą." },
+      { num: "Prawidło 15", title: "Sytuacja przecinania kursów", body: "Statek widzący drugi po <em>prawej burcie</em> (statek zobowiązany) ustępuje mu z drogi. Statek po lewej burcie to statek uprzywilejowany — utrzymuje kurs." },
+      { num: "Prawidło 16", title: "Działanie statku zobowiązanego", body: "Statek <em>zobowiązany do ustąpienia</em> powinien odejść tak wcześnie i wyraźnie, jak to możliwe — zmiana kursu lub prędkości powinna być oczywista dla drugiej strony." },
+      { num: "Prawidło 17", title: "Działanie statku uprzywilejowanego", body: "Statek <em>uprzywilejowany</em> utrzymuje kurs i prędkość. Gdy kolizja staje się nieuchronna — może działać, a jeśli kolizja jest nieuchronna — musi manewrować." },
+      { num: "Prawidło 18", title: "Obowiązki statków względem siebie", body: "Hierarchia: <em>statek nie manewrujący > ograniczonej zdolności manewrowej > ograniczony przez zanurzenie > statek rybacki > żaglowiec > statek mechaniczny</em>. Każdy ustępuje wyżej w hierarchii." },
+      { num: "Prawidło 21", title: "Definicje świateł", body: "<em>Światło masztowe</em>: białe, 225°, widoczne z dzioba i burt. <em>Burtowe</em>: zielone (prawa) i czerwone (lewa), 112,5° każde. <em>Rufowe</em>: białe, 135°. <em>Kotwiczne</em>: białe dookoła 360°." },
+      { num: "Prawidło 23", title: "Statek mechaniczny w drodze", body: "Statek mechaniczny pokazuje: <em>światło masztowe przednie + rufowe + burtowe</em>. Powyżej 50m GT: dwa światła masztowe (tylne wyżej od przedniego)." },
+      { num: "Prawidło 25", title: "Żaglowce w drodze", body: "Żaglowiec pokazuje tylko <em>światła burtowe i rufowe</em>. Może dodatkowo pokazać czerwone nad zielonym na maszcie. Gdy używa silnika — staje się statkiem mechanicznym i stawia stożek dziobem w dół." },
+      { num: "Prawidło 30", title: "Statek na kotwicy", body: "Statek na kotwicy: <em>białe światło kotwiczne 360°</em> w miejscu najlepiej widocznym. Powyżej 100m — drugie białe światło rufowe, niżej od dziobowego." },
+      { num: "Prawidło 34", title: "Sygnały manewrowe i ostrzegawcze", body: "<em>1 krótki</em>: zmieniam kurs w prawo. <em>2 krótkie</em>: zmieniam kurs w lewo. <em>3 krótkie</em>: pracuję śrubą wstecz. <em>5 lub więcej krótkich</em>: sygnał wątpliwości / niebezpieczeństwo." },
+      { num: "Prawidło 35", title: "Sygnały dźwiękowe przy ograniczonej widoczności", body: "<em>1 długi co 2 min</em>: statek mechaniczny w drodze. <em>2 długie co 2 min</em>: statek mechaniczny bez biegu. <em>1 długi + 2 krótkie co 2 min</em>: żaglowiec, statek rybacki, holownik." }
+    ]
+  },
+  navig: {
+    name: "Nawigacja i kartografia",
+    ico: "🧭",
+    rules: [
+      { num: "Podstawa", title: "Kurs i namiar — definicje", body: "<em>Kurs (K)</em>: kierunek ruchu statku mierzony od Północy zgodnie z ruchem wskazówek zegara (0°–360°). <em>Namiar (N)</em>: kierunek na obiekt od statku. <em>Kurs rzeczywisty (Kr)</em>: kurs uwzględniający znos." },
+      { num: "Kompas", title: "Deklinacja i dewia", body: "<em>Deklinacja magnetyczna (d)</em>: kąt między Północą geograficzną a magnetyczną — podana na mapie, zmienia się z czasem. <em>Dewiacja (δ)</em>: błąd kompasu spowodowany masą metalową jachtu — różna na różnych kursach. Korekta: Kr = Kk ± δ ± d" },
+      { num: "Wzór", title: "Przeliczanie kursów", body: "Kolejność poprawek: <em>Kk (kompasowy) → Km (magnetyczny) → Kg (geograficzny)</em>. Wschód '+', Zachód '−'. Przy przejściu Kk→Kg: dodajemy dewiację E lub odejmujemy W, następnie dodajemy deklinację E lub odejmujemy W." },
+      { num: "Pozycja", title: "Metody wyznaczania pozycji", body: "<em>Namiarowanie</em>: 2–3 namiuary na obiekty lądowe dają trójkąt błędu. <em>Pozycja zliczona (DR)</em>: kurs + prędkość + czas. <em>GPS</em>: WGS-84. <em>Transity</em>: dwa obiekty w linii dają dokładny namiar." },
+      { num: "Mapa", title: "Skala mapy i odległość", body: "Szerokość geograficzna: 1 minuta łuku = 1 <em>mila morska (Mm) = 1852 m</em>. Odległość mierzy się na bocznych krawędziach mapy Mercatora (skala szerokości, nie długości). 1 węzeł (kn) = 1 Mm/h." },
+      { num: "Pływy", title: "Pływy i prądy pływowe", body: "<em>Przypływ</em>: woda wznosi się. <em>Odpływ</em>: woda opada. <em>Syzygium</em>: pływy skokowe (pełnia/nów). <em>Kwadratura</em>: pływy nierówne (kwadra). Prąd pływowy wpływa na kurs rzeczywisty — uwzględnij w trójkącie prędkości." },
+      { num: "Trójkąt", title: "Trójkąt prędkości (kurs w prądzie)", body: "Wektory: <em>kurs statku (Ks) + znos (prąd)</em> → kurs rzeczywisty (Kr). Aby trafić do portu przy prądzie: nawiguj pod prąd. Obliczenia graficzne na mapie lub wektorowo." },
+      { num: "Mapy", title: "Godność map morskich", body: "Mapy Merkatorskie: linie proste = loksodroma. Mapy gnomiczne: linia prosta = ortodroma (najkrótsza droga). Dla długich tras — licz na mapie gnomicznej, wykonaj na Merkatorze." }
+    ]
+  },
+  meteo: {
+    name: "Meteorologia morska",
+    ico: "🌬️",
+    rules: [
+      { num: "Wiatr", title: "Skala Beauforta", body: "0: cisza. 3: słaba bryza (7–10 kn). 4: umiarkowana (11–16 kn). 5: dość silna (17–21 kn). 6: silna bryza (22–27 kn). 7: świeży wiatr (28–33 kn). <em>8: sztorm (34–40 kn)</em>. 10–12: gwałtowny sztorm/huragan." },
+      { num: "Ciśnienie", title: "Wyż i niż baryczny", body: "<em>Wyż (antycyklon)</em>: pogoda ustabilizowana, wiatr słaby, obraca się zgodnie z ruchem wskazówek zegara (półkula N). <em>Niż (cyklon)</em>: zła pogoda, silny wiatr, obraca się przeciwnie do wskazówek. Reguła Buys-Ballota: wiatr w plecy → niż po lewej (półkula N)." },
+      { num: "Fronty", title: "Fronty atmosferyczne", body: "<em>Front ciepły</em>: długotrwałe opady, wiatr skręca w prawo, ciśnienie spada stopniowo. <em>Front zimny</em>: gwałtowne opady, porywisty wiatr, ciśnienie spada gwałtownie potem skacze. <em>Front zokludowany</em>: połączenie obu — skomplikowana pogoda." },
+      { num: "Chmury", title: "Rodzaje chmur i prognozy", body: "<em>Cirrus</em> (pióropusze): zapowiedź zmiany pogody za 24–48h. <em>Cumulonimbus</em>: burza, gwałtowne opady, niebezpieczny. <em>Stratus</em>: mgła, mżawka. <em>Cumulus</em>: pogoda konwekcyjna, możliwe szkwały." },
+      { num: "Prognozy", title: "Źródła prognoz meteorologicznych", body: "NavTex: automatyczna telekomunikacja morska, zasięg ~400 Mm. VHF: MSI (Marine Safety Information) na kanale 16 i lokalnych. GRIB: pliki do nawigacji elektronicznej. Barometr: spadek ciśnienia >3 hPa/3h = nadchodząca zła pogoda." },
+      { num: "Mgła", title: "Mgła morska — rodzaje i postępowanie", body: "<em>Mgła adwekcyjna</em>: ciepłe powietrze nad zimną wodą — typowa na Atlantyku. <em>Mgła radiacyjna</em>: nocna nad lądem, zanika po wschodzie słońca. W mgle: wolno, sygnały dźwiękowe, radar, szczególna obserwacja." },
+      { num: "Burze", title: "Rozpoznawanie i unikanie burz", body: "Cumulonimbus widoczny z odległości 30–50 Mm. Odległość błyskawicy: sekundy od błyskawicy do grzmotu ÷ 3 = km. <em>Postępowanie</em>: zrefować żagle zawczasu, zejść z pokładu, odłączyć elektronikę, usunąć maszty antenowe." }
+    ]
+  },
+  prawo: {
+    name: "Prawo morskie i przepisy PZŻ",
+    ico: "⚖️",
+    rules: [
+      { num: "Uprawnienia", title: "Jachtowy Sternik Morski — zakres", body: "Uprawnia do <em>prowadzenia jachtów po wodach morskich</em> bez ograniczenia odległości od brzegu (w granicach dozwolonych przez przepisy kraju). Wymagany wiek: 18 lat. Dokument uznawany przez PZŻ." },
+      { num: "Egzamin", title: "Zakres egzaminu JSM", body: "Teoria: <em>nawigacja, meteorologia, przepisy (COLREG, prawo morskie), ratownictwo, silniki, łączność VHF</em>. Praktyka: manewry na wodzie, obsługa żagli, cumowanie, kotwiczenie, bezpieczeństwo." },
+      { num: "Dokumenty", title: "Dokumenty na jachcie morskim", body: "<em>Dokument rejestracyjny</em> jachtu (bandera). <em>Ubezpieczenie OC</em> (w UE wymagane). <em>Certyfikat bezpieczeństwa</em> (w zależności od kategorii). <em>Dziennik jachtowy</em>. <em>Licencje radiostacyjne</em>: SRC (VHF). Dokumenty załogi." },
+      { num: "Sygnały", title: "Sygnały wzywania pomocy", body: "<em>Mayday, Mayday, Mayday</em>: zagrożenie życia (VHF kanał 16). <em>Pan-Pan</em>: pilne bezpieczeństwo. <em>Sécurité</em>: ostrzeżenie nawigacyjne. Flara czerwona, pomarańczowy dym, lusterko, EPIRBem (121.5/406 MHz), DSC." },
+      { num: "GMDSS", title: "Globalne morskie służby ratownicze", body: "<em>GMDSS</em>: obowiązek posiadania łączności. VHF DSC: kanał 70 — cyfrowe wywołanie selektywne. EPIRB: automatyczna bojka ratunkowa 406 MHz. SART: transponder radarowy. Klasy morskie A1–A4 określają zasięg i wymagany sprzęt." },
+      { num: "Bezpieczeństwo", title: "Wyposażenie ratunkowe", body: "Wymagane (morze): <em>tratwa ratunkowa</em> (certyfikowana), <em>pasy ratunkowe</em> dla każdego, <em>uprzęże z linami</em>, apteczka, flary (certyfikowane), gaśnice, pompa zęzowa, VHF przenośny, radar/reflektor radarowy." },
+      { num: "Prawo", title: "Konwencje morskie — podstawy", body: "<em>SOLAS</em>: bezpieczeństwo życia na morzu. <em>MARPOL</em>: ochrona środowiska morskiego (zakaz zrzutu odpadów). <em>STCW</em>: szkolenie i certyfikacja marynarzy. <em>SAR</em>: poszukiwanie i ratownictwo. Polska ratyfikowała wszystkie kluczowe konwencje IMO." },
+      { num: "Polska", title: "Przepisy polskie i PZŻ", body: "Ustawa o bezpieczeństwie morskim. Rozporządzenie ws. uprawiania turystyki wodnej. <em>PZŻ</em>: Patent Żeglarski, Jachtowy Sternik Morski, Kapitan Jachtowy. Znowelizowane przepisy 2014: uproszczenie licencji śródlądowych, wymagania morskie bez zmian." }
+    ]
+  }
+};
+
+// ══════════════════════════════════════════
+// FLASHCARDS DATA
+// ══════════════════════════════════════════
+const FLASHCARDS = [
+  { cat: "COLREG", q: "Co robi statek zobowiązany do ustąpienia drogi (Prawidło 16)?", a: "Powinien odejść tak wcześnie i wyraźnie, jak to możliwe. Zmiana kursu lub prędkości musi być czytelna dla drugiej strony. Mała zmiana jest błędem!" },
+  { cat: "COLREG", q: "Jakie światła pokazuje żaglowiec w nocy?", a: "Światła burtowe (zielone+czerwone) i rufowe (białe 135°). Może opcjonalnie: czerwone nad zielonym na szczycie masztu. Gdy używa silnika: dodatkowo białe światło masztowe + stożek dziobem w dół." },
+  { cat: "COLREG", q: "Co oznaczają 5 krótkich sygnałów dźwiękowych?", a: "Sygnał wątpliwości lub niebezpieczeństwa — 'nie rozumiem Twoich zamiarów, grozi kolizja'. Należy natychmiast powtórzyć sygnał i podjąć działanie unikające kolizji." },
+  { cat: "COLREG", q: "Hierarchia ustępowania między statkami (Prawidło 18)?", a: "1. Statek nie manewrujący (NUC). 2. Ograniczonej zdolności manewrowej (RAM). 3. Ograniczony przez zanurzenie. 4. Statek rybacki. 5. Żaglowiec. 6. Statek mechaniczny. Każdy ustępuje wyżej w liście." },
+  { cat: "COLREG", q: "Sytuacja czołowa (Prawidło 14) — co robią obydwa statki?", a: "Gdy dwa statki mechaniczne płyną naprzeciwko siebie — OBA skręcają w prawo, by minąć się lewoburtami. Dotyczy to sytuacji gdy widzisz oba jego światła burtowe lub jeden lub oba masztowe w linii." },
+  { cat: "Nawigacja", q: "Co to jest deklinacja magnetyczna?", a: "Kąt między Północą geograficzną (prawdziwą) a Północą magnetyczną. Podana na mapie morskiej jako wartość i roczna zmiana. E (wschód) dodajemy do kursu magnetycznego, W (zachód) odejmujemy." },
+  { cat: "Nawigacja", q: "Jak mierzysz odległość na mapie Mercatora?", a: "Na bocznej krawędzi mapy (skala szerokości geograficznej) — 1 minuta = 1 mila morska. NIE używaj dolnej krawędzi (skala długości geograficznej). Odległość mierz na tej samej szerokości co trasa." },
+  { cat: "Nawigacja", q: "Co to jest pozycja zliczona (DR)?", a: "Pozycja obliczona na podstawie: ostatniej znana pozycji + kurs + prędkość + czas. Nie uwzględnia znoszenia przez prąd i wiatr. Zawsze weryfikuj namiarami lub GPS." },
+  { cat: "Nawigacja", q: "Jak działa trójkąt prędkości w prądzie?", a: "Trzy wektory: (1) kurs statku własny, (2) prąd (kierunek i prędkość), (3) kurs rzeczywisty (wypadkowy). Aby trafić do celu — oblicz kurs kompensujący prąd. Wykonaj graficznie na mapie." },
+  { cat: "Meteorologia", q: "Reguła Buys-Ballota — jak określić położenie niżu?", a: "Stań tyłem do wiatru (półkula północna) — centrum niżu barycznego jest po Twojej LEWEJ stronie. Wiatr wieje wokół niżu przeciwnie do wskazówek zegara (półkula N)." },
+  { cat: "Meteorologia", q: "Skala Beauforta — kiedy zrefować główny żagiel?", a: "Zwykle ref I przy 4 B (11–16 kn), ref II przy 5–6 B (17–27 kn). Przy 7 B (28–33 kn) — rozważ storm jib i głęboki ref lub tri-sail. 8 B+ = warunki sztormowe." },
+  { cat: "Meteorologia", q: "Co zapowiada szybki spadek ciśnienia?", a: "Spadek >3 hPa w 3 godziny = nadchodząca zła pogoda. Spadek >6 hPa/3h = gwałtowna pogoda. Sprawdzaj barometr co 3 godziny i notuj tendencję w dzienniku jachtowym." },
+  { cat: "Meteorologia", q: "Chmury Cirrus — co zapowiadają?", a: "Zwiastun nadchodzącej zmiany pogody za 24–48 godzin. Pióropusze (koński ogon) wskazują kierunek nadchodzącego frontu. Często poprzedza je halo wokół słońca lub księżyca." },
+  { cat: "Prawo/PZŻ", q: "Sygnał MAYDAY — jak nadać prawidłowo?", a: "Kanał VHF 16: 'MAYDAY MAYDAY MAYDAY — tu [nazwa jachtu x3] — pozycja [lat/lon lub namiar] — [opis sytuacji] — [liczba osób] — wzywam pomocy — OVER'. Aktywuj DSC przed nadaniem głosowym." },
+  { cat: "Prawo/PZŻ", q: "Jakie uprawnienia daje patent JSM?", a: "Prowadzenie jachtów morskich bez ograniczenia odległości od brzegu (w granicach przepisów kraju nadbrzeżnego). Wymagany wiek 18 lat. Uznawany przez kraje stosujące przepisy RYA/PZŻ. Podstawa do licencji Kapitana Jachtowego." },
+  { cat: "Prawo/PZŻ", q: "Co to jest DSC i jak działa?", a: "Digital Selective Calling — cyfrowe wywołanie selektywne VHF. Kanał 70 (tylko DSC). Wysyła sygnał MAYDAY z pozycją GPS automatycznie. Każda radiostacja ma numer MMSI (9 cyfr). Przed użyciem zarejestruj MMSI." },
+  { cat: "Prawo/PZŻ", q: "MARPOL — co zakazuje na morzu?", a: "Zakaz zrzutu odpadów plastikowych w morzu (strefa MARPOL). Olejowe wody zęzowe tylko przez separator (5 ppm). Ścieki: zakaz blisko brzegu. Śmieci: specjalne przepisy strefowe. Prowadź książkę olejową." }
+];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let storage = {};
+let currentTab = 'home';
+let sessions = [];
+let activeSessionId = null;
+let chatHistory = [];
+let flashIdx = 0;
+let flashShown = false;
+let flashFilter = null;
+let flashStats = { correct: 0, total: 0 };
+let filteredCards = [...FLASHCARDS];
+let openSubjects = {};
+
+// ══════════════════════════════════════════
+// STORAGE (localStorage fallback)
+// ══════════════════════════════════════════
+function saveLocal(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+function loadLocal(key) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+
+function loadState() {
+  sessions = loadLocal('jsm_sessions') || [];
+  flashStats = loadLocal('jsm_flashstats') || { correct: 0, total: 0 };
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('st-sessions').textContent = sessions.length;
+  document.getElementById('st-cards').textContent = flashStats.total;
+  const pct = flashStats.total > 0 ? Math.round(flashStats.correct / flashStats.total * 100) : 0;
+  document.getElementById('st-correct').textContent = pct + '%';
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+function showTab(tab) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+  document.getElementById('nb-' + tab).classList.add('active');
+  currentTab = tab;
+  if (tab === 'study') buildStudy(null);
+  if (tab === 'flash') buildFlash();
+  if (tab === 'sessions') buildSessions();
+  if (tab === 'chat') scrollMsgs();
+}
+
+function goStudy(subject) {
+  showTab('study');
+  setTimeout(() => { buildStudy(subject); }, 100);
+}
+
+// ══════════════════════════════════════════
+// STUDY SCREEN
+// ══════════════════════════════════════════
+function buildStudy(openSubject) {
+  const list = document.getElementById('study-list');
+  list.innerHTML = '';
+  for (const [key, data] of Object.entries(STUDY_DATA)) {
+    const card = document.createElement('div');
+    card.className = 'subject-card';
+    if (openSubject === key) openSubjects[key] = true;
+    const isOpen = openSubjects[key];
+    card.innerHTML = `
+      <div class="subject-hdr" onclick="toggleSubject('${key}')">
+        <span class="s-ico">${data.ico}</span>
+        <span class="s-name">${data.name}</span>
+        <span class="s-count">${data.rules.length} tematów ${isOpen ? '▲' : '▼'}</span>
+      </div>
+      <div class="subject-body ${isOpen ? 'open' : ''}" id="sb-${key}">
+        ${data.rules.map(r => `
+          <div class="rule-item">
+            <div class="rule-num">${r.num}</div>
+            <div class="rule-title">${r.title}</div>
+            <div class="rule-body">${r.body}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    list.appendChild(card);
+  }
+}
+
+function toggleSubject(key) {
+  openSubjects[key] = !openSubjects[key];
+  const body = document.getElementById('sb-' + key);
+  body.classList.toggle('open', openSubjects[key]);
+  buildStudy(null); // re-render to update arrows
+}
+
+// ══════════════════════════════════════════
+// FLASHCARDS
+// ══════════════════════════════════════════
+function buildFlash() {
+  const cats = [...new Set(FLASHCARDS.map(c => c.cat))];
+  const filterDiv = document.getElementById('flash-filter');
+  filterDiv.innerHTML = `<button class="filter-btn ${!flashFilter ? 'on' : ''}" onclick="setFilter(null)">Wszystkie</button>` +
+    cats.map(c => `<button class="filter-btn ${flashFilter === c ? 'on' : ''}" onclick="setFilter('${c}')">${c}</button>`).join('');
+  applyFilter();
+}
+
+function setFilter(cat) {
+  flashFilter = cat;
+  flashIdx = 0;
+  buildFlash();
+}
+
+function applyFilter() {
+  filteredCards = flashFilter ? FLASHCARDS.filter(c => c.cat === flashFilter) : [...FLASHCARDS];
+  showCard();
+}
+
+function showCard() {
+  if (filteredCards.length === 0) return;
+  const card = filteredCards[flashIdx];
+  document.getElementById('fcat').textContent = card.cat;
+  document.getElementById('fq').textContent = card.q;
+  document.getElementById('fa').textContent = card.a;
+  document.getElementById('fa').classList.remove('show');
+  document.getElementById('fhint').style.display = 'block';
+  document.getElementById('flash-actions').style.display = 'none';
+  flashShown = false;
+  const pct = ((flashIdx + 1) / filteredCards.length * 100).toFixed(0);
+  document.getElementById('fbar').style.width = pct + '%';
+  document.getElementById('fcounter').textContent = `${flashIdx + 1} / ${filteredCards.length}`;
+}
+
+function flipCard() {
+  if (flashShown) return;
+  flashShown = true;
+  document.getElementById('fa').classList.add('show');
+  document.getElementById('fhint').style.display = 'none';
+  document.getElementById('flash-actions').style.display = 'flex';
+}
+
+function rateCard(correct) {
+  flashStats.total++;
+  if (correct) flashStats.correct++;
+  saveLocal('jsm_flashstats', flashStats);
+  updateStats();
+  nextCard();
+}
+
+function nextCard() {
+  flashIdx = (flashIdx + 1) % filteredCards.length;
+  showCard();
+}
+
+// ══════════════════════════════════════════
+// CHAT / AI
+// ══════════════════════════════════════════
+const SYSTEM_PROMPT = `Jesteś ekspertem i instruktorem żeglarstwa morskiego, specjalistą od egzaminu Jachtowego Sternika Morskiego (JSM) w Polsce. Odpowiadasz WYŁĄCZNIE po polsku.
+
+Twoje kompetencje:
+- Przepisy COLREG (Prawidła drogi morskiej) — w języku polskim
+- Nawigacja morska, kartografia, busola, pływy
+- Meteorologia morska, Skala Beauforta, fronty, prognozy
+- Prawo morskie polskie, przepisy PZŻ, wymagania egzaminacyjne JSM
+- Bezpieczeństwo morskie, GMDSS, sygnały ratunkowe
+
+Rozmawiacie z Kapitanem — doświadczonym inżynierem mechanicznym z Toronto, który żegluje rekreacyjnie i przygotowuje się do egzaminu JSM PZŻ.
+
+Styl odpowiedzi:
+- Zawsze po polsku
+- Precyzyjnie i technicznie — Kapitan lubi dokładność
+- Powołuj się na konkretne Prawidła COLREG (np. "Prawidło 16"), artykuły ustaw, przepisy PZŻ
+- Używaj przykładów praktycznych
+- Zakończ każdą odpowiedź sekcją "💡 Pytania kontrolne:" z 2 pytaniami egzaminacyjnymi na temat`;
+
+async function sendMsg() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+
+  appendMsg('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  if (!activeSessionId) createSession(text);
+
+  document.getElementById('typing').style.display = 'flex';
+  scrollMsgs();
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: chatHistory
+      })
+    });
+    const data = await resp.json();
+    const reply = data.content?.find(b => b.type === 'text')?.text || 'Błąd połączenia.';
+    chatHistory.push({ role: 'assistant', content: reply });
+    document.getElementById('typing').style.display = 'none';
+    appendMsg('bot', reply);
+    saveSession();
+  } catch (e) {
+    document.getElementById('typing').style.display = 'none';
+    appendMsg('bot', 'Błąd: ' + e.message);
+  }
+}
+
+function quickAsk(text) {
+  document.getElementById('chat-input').value = text;
+  sendMsg();
+}
+
+function appendMsg(role, text) {
+  const typing = document.getElementById('typing');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = formatMsg(text);
+  div.appendChild(bubble);
+  document.getElementById('messages').insertBefore(div, typing);
+  scrollMsgs();
+}
+
+function formatMsg(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/\n{2,}/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+}
+
+function scrollMsgs() {
+  setTimeout(() => {
+    const m = document.getElementById('messages');
+    if (m) m.scrollTop = m.scrollHeight;
+  }, 100);
+}
+
+// ══════════════════════════════════════════
+// SESSIONS
+// ══════════════════════════════════════════
+function createSession(firstMsg) {
+  activeSessionId = Date.now().toString();
+  const sess = {
+    id: activeSessionId,
+    title: firstMsg.slice(0, 45) + (firstMsg.length > 45 ? '…' : ''),
+    ts: Date.now(),
+    history: []
+  };
+  sessions.unshift(sess);
+  saveLocal('jsm_sessions', sessions);
+  updateStats();
+}
+
+function saveSession() {
+  const sess = sessions.find(s => s.id === activeSessionId);
+  if (sess) {
+    sess.history = chatHistory;
+    sess.ts = Date.now();
+    saveLocal('jsm_sessions', sessions);
+  }
+}
+
+function newChatSession() {
+  activeSessionId = null;
+  chatHistory = [];
+  document.getElementById('messages').innerHTML = `
+    <div class="msg bot"><div class="msg-bubble">
+      Nowa sesja! Witaj ponownie, Kapitanie! 🧭 Pytaj o co chcesz — COLREG, nawigację, meteorologię lub przepisy PZŻ.
+    </div></div>
+    <div class="msg" id="typing" style="display:none;">
+      <div class="msg-bubble"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+    </div>`;
+  showTab('chat');
+}
+
+function buildSessions() {
+  const list = document.getElementById('session-list');
+  list.innerHTML = '';
+  if (sessions.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--mist);font-size:13px;padding:20px;">Brak zapisanych sesji. Zacznij rozmowę z AI!</div>';
+    return;
+  }
+  sessions.forEach(sess => {
+    const d = document.createElement('div');
+    d.className = 'sess-card' + (sess.id === activeSessionId ? ' active-sess' : '');
+    d.innerHTML = `
+      <button class="sess-del" onclick="deleteSession('${sess.id}', event)">✕</button>
+      <div class="sess-title">${sess.title}</div>
+      <div class="sess-meta">${new Date(sess.ts).toLocaleDateString('pl-PL', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${sess.history.length} wiadomości</div>`;
+    d.onclick = () => loadSession(sess.id);
+    list.appendChild(d);
+  });
+}
+
+function loadSession(id) {
+  const sess = sessions.find(s => s.id === id);
+  if (!sess) return;
+  activeSessionId = id;
+  chatHistory = sess.history || [];
+  const msgs = document.getElementById('messages');
+  msgs.innerHTML = `<div class="msg" id="typing" style="display:none;"><div class="msg-bubble"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></div>`;
+  chatHistory.forEach(m => appendMsg(m.role === 'user' ? 'user' : 'bot', m.content));
+  showTab('chat');
+}
+
+function deleteSession(id, e) {
+  e.stopPropagation();
+  sessions = sessions.filter(s => s.id !== id);
+  if (activeSessionId === id) { activeSessionId = null; chatHistory = []; }
+  saveLocal('jsm_sessions', sessions);
+  updateStats();
+  buildSessions();
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.addEventListener('load', () => {
+  loadState();
+  buildStudy(null);
+  buildFlash();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+});
+</script>
+</body>
+</html>
